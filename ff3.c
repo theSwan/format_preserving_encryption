@@ -1,4 +1,3 @@
-// 48 bits encryption 
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
@@ -12,9 +11,9 @@ struct ciphersql_fpe_t {
     AES_KEY key;
 };
 
-long mod = 16777216;
 
 #define CIPHERSQL_FPE_BITS 48
+#define FF3_ROUNDS 8
 
 int ciphersql_fpe_init(ciphersql_fpe_t *fpe, int type, const unsigned char *key, int keybits)
 {
@@ -38,6 +37,9 @@ void input_proc(long num, char *str){
         bits = num & 1;
         num = num >> 1;
         str[i] = bits + '0';
+    }
+    if(num){
+        fprintf(stderr, "%s: input out of range\n", __FUNCTION__);
     }
     str[CIPHERSQL_FPE_BITS] = '\0';
 }
@@ -96,7 +98,7 @@ long ciphersql_fpe_bits_encrypt(ciphersql_fpe_t *fpe, long input_num, char *twea
     memset(in, 0, sizeof(in));
 
     input_proc(input_num, in);
-    printf("the 48-bits representation of the input: %s\n", in);
+    printf("the bits representation of the input %ld: %s\n", input_num, in);
 
     size_t inlen;
     int llen, rlen, i;
@@ -123,22 +125,19 @@ long ciphersql_fpe_bits_encrypt(ciphersql_fpe_t *fpe, long input_num, char *twea
     rlen = inlen - llen;
 
     memcpy(lbuf, in, llen);
-    lbuf[llen] = 0;  // 末位赋值为0，可以作为字符串操作
-    //printf("%s\n", lbuf);
+    lbuf[llen] = 0;  
     memcpy(rbuf, in+llen, rlen);
     rbuf[rlen] = 0;
-    //printf("%s\n", rbuf);
 
     memcpy(tlbuf, tweak, 32);
-    tlbuf[32] = 0;  // 末位赋值为0，可以作为字符串操作
+    tlbuf[32] = 0;  
     tl = str2num(tlbuf);
     tr = str2num(tweak + 32);
-   // printf("%ld %ld\n", tl, tr);
 
     unsigned char pblock[16], yblock[16];
     //printf("%ld %ld\n", str2num(lbuf), str2num(rbuf));
 
-    for (i = 0; i < 8; i++) {
+    for (i = 0; i < FF3_ROUNDS; i++) {
 
         if(i%2 == 0){
             m = llen;
@@ -148,6 +147,7 @@ long ciphersql_fpe_bits_encrypt(ciphersql_fpe_t *fpe, long input_num, char *twea
             m = rlen;
             w = tl;
         }
+        long mod = 2 << m;
         memset(pblock, 0, sizeof(pblock));
         memset(yblock, 0, sizeof(yblock));
         tmp = w ^ i;
@@ -215,14 +215,12 @@ long ciphersql_fpe_bits_decrypt(ciphersql_fpe_t *fpe, long input_num, char *twea
     rlen = inlen - llen;
 
     memcpy(lbuf, in, llen);
-    lbuf[llen] = 0;  // 末位赋值为0，可以作为字符串操作
-    //printf("%s\n", lbuf);
+    lbuf[llen] = 0; 
     memcpy(rbuf, in+llen, rlen);
     rbuf[rlen] = 0;
-    //printf("%s\n", rbuf);
 
     memcpy(tlbuf, tweak, 32);
-    tlbuf[32] = 0;  // 末位赋值为0，可以作为字符串操作
+    tlbuf[32] = 0;  
     tl = str2num(tlbuf);
     tr = str2num(tweak + 32);
     //printf("%ld %ld\n", tl, tr);
@@ -230,7 +228,7 @@ long ciphersql_fpe_bits_decrypt(ciphersql_fpe_t *fpe, long input_num, char *twea
     unsigned char pblock[16], yblock[16];
     //printf("%ld %ld\n", str2num(lbuf), str2num(rbuf));
 
-    for (i = 7; i >= 0; i--) {
+    for (i = FF3_ROUNDS - 1; i >= 0; i--) {
         if(i%2 == 0){
             m = llen;
             w = tr;
@@ -239,6 +237,7 @@ long ciphersql_fpe_bits_decrypt(ciphersql_fpe_t *fpe, long input_num, char *twea
             m = rlen;
             w = tl;
         }
+        long mod = 2 << m;
         memset(pblock, 0, sizeof(pblock));
         memset(yblock, 0, sizeof(yblock));
         tmp = w ^ i;
@@ -290,7 +289,7 @@ int ciphersql_fpe_test()
 
     long tweak = 12345678;
     num2str(tweak, buf, 64);
-    printf("%s\n", buf);
+    printf("tweak %ld in bits representation: %s\n", tweak, buf);
 
     r = ciphersql_fpe_bits_encrypt(&fpe, 123546798, buf);
 
