@@ -31,11 +31,9 @@
 #define CIPHERSQL_TYPE_BANKCARD		0x02
 #define CIPHERSQL_TYPE_IDCARD		0x03
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
 typedef struct ciphersql_fpe_t ciphersql_fpe_t;
 
@@ -43,7 +41,6 @@ int ciphersql_fpe_init(ciphersql_fpe_t *fpe, int type, const unsigned char *key,
 int ciphersql_fpe_encrypt(ciphersql_fpe_t *fpe, const char *in, const unsigned char *tweak, size_t tweaklen, char *out);
 int ciphersql_fpe_decrypt(ciphersql_fpe_t *fpe, const char *in, const unsigned char *tweak, size_t tweaklen, char *out);
 void ciphersql_fpe_cleanup(ciphersql_fpe_t *fpe);
-
 
 #ifdef __cplusplus
 }
